@@ -1,0 +1,106 @@
+version: "3.9"
+
+services:
+  # InfluxDB 2.x - Banco de dados time-series para armazenar métricas
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: influxdb-proxmox
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      # Configuração inicial do InfluxDB
+      INFLUXDB_DB: proxmox
+      INFLUXDB_ADMIN_USER: ${INFLUX_ADMIN_USER:-admin}
+      INFLUXDB_ADMIN_PASSWORD: ${INFLUX_ADMIN_PASSWORD:-influxdb_senha_forte}
+      INFLUXDB_HTTP_AUTH_ENABLED: "true"
+    volumes:
+      # Persistência de dados
+      - influxdb_data:/var/lib/influxdb2
+      - influxdb_config:/etc/influxdb2
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - monitoring
+
+  # Telegraf - Agent de coleta de métricas do Proxmox
+  telegraf:
+    image: telegraf:1.28-alpine
+    container_name: telegraf-proxmox
+    restart: unless-stopped
+    environment:
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_USER: ${INFLUX_ADMIN_USER:-admin}
+      INFLUXDB_PASSWORD: ${INFLUX_ADMIN_PASSWORD:-influxdb_senha_forte}
+      PROXMOX_HOST: ${PROXMOX_HOST:-192.168.1.100}
+      PROXMOX_USER: ${PROXMOX_USER:-root@pam}
+      PROXMOX_PASSWORD: ${PROXMOX_PASSWORD:-sua_senha_proxmox}
+      PROXMOX_SSL_VERIFY: "${PROXMOX_SSL_VERIFY:-false}"
+    volumes:
+      - ./telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    networks:
+      - monitoring
+
+  # Grafana - Plataforma de visualização e dashboards
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: grafana-proxmox
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-grafana_senha_forte}
+      GF_INSTALL_PLUGINS: "grafana-piechart-panel,grafana-clock-panel"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - influxdb
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Node Exporter - Coleta métricas do host Docker (opcional)
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter-proxmox
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - monitoring
+
+volumes:
+  influxdb_data:
+    driver: local
+  influxdb_config:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  monitoring:
+    driver: bridge
