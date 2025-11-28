@@ -20,6 +20,8 @@ services:
       # Persistência de dados
       - influxdb_data:/var/lib/influxdb2
       - influxdb_config:/etc/influxdb2
+      # Script de inicialização automática
+      - ./scripts/init-influxdb.sh:/tmp/init-influxdb.sh:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
       interval: 30s
