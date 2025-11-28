@@ -27,27 +27,6 @@ services:
     networks:
       - monitoring
 
-  # Telegraf - Agent de coleta de métricas do Proxmox
-  telegraf:
-    image: telegraf:1.28-alpine
-    container_name: telegraf-proxmox
-    restart: unless-stopped
-    environment:
-      INFLUXDB_URL: http://influxdb:8086
-      INFLUXDB_USER: ${INFLUX_ADMIN_USER:-admin}
-      INFLUXDB_PASSWORD: ${INFLUX_ADMIN_PASSWORD:-influxdb_senha_forte}
-      PROXMOX_HOST: ${PROXMOX_HOST:-192.168.1.100}
-      PROXMOX_USER: ${PROXMOX_USER:-root@pam}
-      PROXMOX_PASSWORD: ${PROXMOX_PASSWORD:-sua_senha_proxmox}
-      PROXMOX_SSL_VERIFY: "${PROXMOX_SSL_VERIFY:-false}"
-    volumes:
-      - ./telegraf.conf:/etc/telegraf/telegraf.conf:ro
-    depends_on:
-      influxdb:
-        condition: service_healthy
-    networks:
-      - monitoring
-
   # Grafana - Plataforma de visualização e dashboards
   grafana:
     image: grafana/grafana:10.2.2
@@ -73,25 +52,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 40s
-
-  # Node Exporter - Coleta métricas do host Docker (opcional)
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: node-exporter-proxmox
-    restart: unless-stopped
-    ports:
-      - "9100:9100"
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - '--path.rootfs=/rootfs'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    networks:
-      - monitoring
 
 volumes:
   influxdb_data:

@@ -53,7 +53,6 @@ Comandos:
 
 Exemplos:
     ./manage.sh start
-    ./manage.sh logs telegraf
     ./manage.sh shell grafana
     ./manage.sh backup
 EOF
@@ -128,7 +127,6 @@ function cmd_backup() {
     
     print_info "Backup de configurações..."
     cp docker-compose.yml "$BACKUP_DIR/"
-    cp telegraf.conf "$BACKUP_DIR/"
     cp .env "$BACKUP_DIR/.env.backup"
     
     print_info "Compactando backup..."
@@ -176,7 +174,6 @@ function cmd_health() {
     fi
     
     print_info "Telegraf..."
-    if docker-compose exec -T telegraf telegraf --version > /dev/null 2>&1; then
         print_success "Telegraf está rodando"
     else
         print_error "Telegraf está com problemas"

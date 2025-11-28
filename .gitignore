@@ -58,3 +58,4 @@ Thumbs.db
 # INSTRUÇÕES INTERNAS (NÃO ENVIAR!)
 # ============================================================================
 .github/copilot-instructions.md  # Instruções específicas do Copilot (uso interno)
+telegraf.conf
