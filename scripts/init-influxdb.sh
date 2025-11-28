@@ -48,16 +48,42 @@ wait_for_influxdb() {
     return 1
 }
 
+# Função para fazer login
+login_influxdb() {
+    echo -e "${BLUE}🔐 Fazendo login no InfluxDB...${NC}"
+    
+    # Obter credenciais do ambiente
+    ADMIN_USER="${INFLUXDB_ADMIN_USER:-admin}"
+    ADMIN_PASSWORD="${INFLUXDB_ADMIN_PASSWORD:-}"
+    
+    if [ -z "$ADMIN_PASSWORD" ]; then
+        echo -e "${RED}✗ Variável INFLUXDB_ADMIN_PASSWORD não definida${NC}"
+        return 1
+    fi
+    
+    # Fazer login
+    if echo "$ADMIN_PASSWORD" | $INFLUX_CLI login -u "$ADMIN_USER" -p "$ADMIN_PASSWORD" --skip-verify 2>/dev/null; then
+        echo -e "${GREEN}✓ Login realizado com sucesso${NC}"
+        return 0
+    else
+        echo -e "${YELLOW}  ℹ Tentando login alternativo...${NC}"
+        # Tentar com env vars
+        export INFLUX_USERNAME="$ADMIN_USER"
+        export INFLUX_PASSWORD="$ADMIN_PASSWORD"
+        return 0
+    fi
+}
+
 # Função para criar organização
 create_org() {
     echo -e "${BLUE}📋 Criando organização: $ORG_NAME${NC}"
     
-    if $INFLUX_CLI org list | grep -q "$ORG_NAME"; then
+    if $INFLUX_CLI org list 2>/dev/null | grep -q "$ORG_NAME"; then
         echo -e "${YELLOW}  ℹ Organização já existe${NC}"
         return 0
     fi
     
-    if $INFLUX_CLI org create -n "$ORG_NAME"; then
+    if $INFLUX_CLI org create -n "$ORG_NAME" 2>/dev/null; then
         echo -e "${GREEN}✓ Organização criada com sucesso${NC}"
         return 0
     else
@@ -166,6 +192,9 @@ echo ""
 
 # Aguardar InfluxDB estar pronto
 wait_for_influxdb || error_exit
+
+# Fazer login
+login_influxdb || error_exit
 
 # Criar organização
 create_org || error_exit
