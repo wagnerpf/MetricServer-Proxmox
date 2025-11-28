@@ -14,6 +14,8 @@ services:
       INFLUXDB_ADMIN_USER: ${INFLUX_ADMIN_USER:-admin}
       INFLUXDB_ADMIN_PASSWORD: ${INFLUX_ADMIN_PASSWORD:-influxdb_senha_forte}
       INFLUXDB_HTTP_AUTH_ENABLED: "true"
+      # Token será usado pelo Grafana
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN}
     volumes:
       # Persistência de dados
       - influxdb_data:/var/lib/influxdb2
@@ -39,6 +41,8 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-grafana_senha_forte}
       GF_INSTALL_PLUGINS: "grafana-piechart-panel,grafana-clock-panel"
       GF_USERS_ALLOW_SIGN_UP: "false"
+      # Token InfluxDB para provisioning de datasources
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
